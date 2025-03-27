@@ -30,11 +30,13 @@ for idx, subfolder in enumerate(os.listdir(imagesFolder)):
     # Check if it's a directory
     if os.path.isdir(subfolderPath):
         # Use the subfolder name as the label and assign it a numerical ID
-        labelIds[subfolder] = idx
+        labelIds[idx] = subfolder
 
         for file in os.listdir(subfolderPath):
+            if file == ".DS_Store":  # Skip .DS_Store
+                continue
             filePath = os.path.join(subfolderPath, file)
-            
+            print("file: ", file)
             if file.lower().endswith(('.jpg', '.png', '.jfif')):
                 pilImage = Image.open(filePath).convert('L')
                 imageArray = np.array(pilImage)
@@ -44,10 +46,24 @@ for idx, subfolder in enumerate(os.listdir(imagesFolder)):
 
                 faces = faceCascade.detectMultiScale(imageArray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-                for (x, y, w, h) in faces:
+                if len(faces) > 0:
+                    print("here")
+                    # Sort faces by size (width * height) in descending order and pick the largest
+                    faces = sorted(faces, key=lambda x: x[2] * x[3], reverse=True)
+                    largest_face = faces[0]  # Select the largest face
+                    x, y, w, h = largest_face
                     faceRegion = imageArray[y:y + h, x:x + w]  # Crop the face region
                     croppedFaces.append(faceRegion)
                     imageLabels.append(idx)
+
+                count = 0
+                for (x, y, w, h) in faces:
+                    if count == 0:
+                        faceRegion = imageArray[y:y + h, x:x + w]  # Crop the face region
+                        croppedFaces.append(faceRegion)
+                        imageLabels.append(idx)
+                        print("added face", subfolder, "with ID", idx)
+                        count += 1
 
 with open("labels.pickle", "wb") as f:
     pickle.dump(labelIds, f)
@@ -55,6 +71,9 @@ with open("labels.pickle", "wb") as f:
 print("Label-to-ID mapping has been serialized to 'labels.pickle'.")
 print("Training the model...")
 
+for face in croppedFaces:
+    cv2.imshow("face", face)
+    cv2.waitKey(0)
 # Step 1: Initialize the LBPH face recognizer
 recognizer = cv2.face.LBPHFaceRecognizer_create()
 
