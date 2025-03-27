@@ -14,6 +14,7 @@ imagesFolder = os.path.join(currentDir, 'images')
 labelIds = {}
 
 grayscaleImages = []
+grayLabels = []
 croppedFaces = []
 imageLabels = []
 
@@ -32,17 +33,17 @@ for idx, subfolder in enumerate(os.listdir(imagesFolder)):
         for file in os.listdir(subfolderPath):
             filePath = os.path.join(subfolderPath, file)
             
-            if file.lower().endswith(('.jpg', '.png', '.jfif')):
+            if file.lower().endswith(('.jpg', '.png', '.jfif', '.heic')):
                 pilImage = Image.open(filePath).convert('L')
-                imageArray = cv2.cvtColor(np.array(pilImage), cv2.COLOR_GRAY2BGR)
+                imageArray = np.array(pilImage)
 
                 grayscaleImages.append(pilImage)
-                imageLabels.append(idx)
+                grayLabels.append(idx)
 
                 faces = faceCascade.detectMultiScale(imageArray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
                 for (x, y, w, h) in faces:
-                    faceRegion = pilImage.crop((x, y, x + w, y + h))  # Crop the face region
+                    faceRegion = imageArray[y:y + h, x:x + w]  # Crop the face region
                     croppedFaces.append(faceRegion)
                     imageLabels.append(idx)
 
@@ -50,12 +51,13 @@ with open("labels.pickle", "wb") as f:
     pickle.dump(labelIds, f)
 
 print("Label-to-ID mapping has been serialized to 'labels.pickle'.")
+print("Training the model...")
 
 # Step 1: Initialize the LBPH face recognizer
 recognizer = cv2.face.LBPHFaceRecognizer_create()
 
 # Step 2: Train the recognizer with the face images and their corresponding labels
-recognizer.train(faceRegion, np.array(imageLabels))
+recognizer.train(croppedFaces, np.array(imageLabels))
 
 # Step 3: Save the trained model to a file
 recognizer.save("trainer.yml")
