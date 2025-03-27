@@ -5,7 +5,6 @@ from PIL import Image, ImageTk
 import threading
 import pickle
 import pyrealsense2 as rs
-import time
 
 # Function to draw eyes on a separate window
 def drawEyes(canvas):
@@ -31,7 +30,6 @@ recognizer.read('trainer.yml')  # Replace with the path to your trained model
 # Load the labels pickle file
 with open('labels.pickle', 'rb') as file:
     data = pickle.load(file)
-data = {v: k for k, v in data.items()}
 
 # Set up the RealSense pipeline
 pipeline = rs.pipeline()
@@ -46,17 +44,11 @@ canvas = tk.Canvas(root, width=500, height=500)
 canvas.pack()
 drawEyes(canvas)
 
-last_recognized_label = None
-last_update_time = 0
-recognition_delay = 3  # 3 seconds delay for updating
-
 # This function runs the OpenCV code in a separate thread to avoid blocking the GUI
 def capture_faces():
-    global last_recognized_label, last_update_time, current_time
 
     try:
         while True:
-            current_time = time.time()
             # Wait for a coherent frame
             frames = pipeline.wait_for_frames()
 
@@ -74,7 +66,7 @@ def capture_faces():
 
             # Detect faces in the grayscale image
             faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-            if(len(faces) == 0 and current_time - last_update_time >= recognition_delay):
+            if(len(faces) == 0):
                 drawEyes(canvas)
             # Loop over the detected faces
             for (x, y, w, h) in faces:
@@ -84,16 +76,13 @@ def capture_faces():
                 label, confidence = recognizer.predict(roi_gray)
 
                 # If the label has changed and 3 seconds have passed, update the name
-                if confidence < 80 and (last_recognized_label != label or current_time - last_update_time >= recognition_delay):
+                if confidence < 50:
                     # Update the name on the canvas
-                    name = data.get(label, "Unknown")
+                    name = data.get(label)
                     updateName(canvas, name)
                     print(f"Recognized: {name} with confidence: {confidence}")
 
-                    # Update the last recognized label and the last update time
-                    last_recognized_label = label
-                    last_update_time = current_time
-                elif confidence >= 80:
+                else:
                     # If the confidence is too low, show "Stranger Danger"
                     updateName(canvas, "Stranger Danger")
                     print("Not confident")
