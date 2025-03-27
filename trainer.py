@@ -24,7 +24,9 @@ faceCascade = cv2.CascadeClassifier(cascadePath)
 # Walk through each subfolder in the 'images' directory
 for idx, subfolder in enumerate(os.listdir(imagesFolder)):
     subfolderPath = os.path.join(imagesFolder, subfolder)
-    
+    print("index: ", idx)
+    print("subfolder: ", subfolder)
+    print()
     # Check if it's a directory
     if os.path.isdir(subfolderPath):
         # Use the subfolder name as the label and assign it a numerical ID
@@ -33,7 +35,7 @@ for idx, subfolder in enumerate(os.listdir(imagesFolder)):
         for file in os.listdir(subfolderPath):
             filePath = os.path.join(subfolderPath, file)
             
-            if file.lower().endswith(('.jpg', '.png', '.jfif', '.heic')):
+            if file.lower().endswith(('.jpg', '.png', '.jfif')):
                 pilImage = Image.open(filePath).convert('L')
                 imageArray = np.array(pilImage)
 
